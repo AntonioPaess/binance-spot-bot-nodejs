@@ -1,0 +1,16 @@
+{
+  "name": "binance-spot-bot-nodejs",
+  "version": "1.0.0",
+  "description": "An automated trading bot for Binance Spot, built with Node.js.   This project enables automated buying and selling operations on Binance using the exchange's official API.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node -r dotenv/config index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ws": "^8.18.0"
+  }
+}
