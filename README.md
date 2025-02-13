@@ -1,75 +1,78 @@
 # Binance Spot Bot Node.js
 
-An automated trading bot for Binance Spot, built with Node.js.  
+An automated trading bot for Binance Spot, built with Node.js.
 This project enables automated buying and selling operations on Binance using the exchange's official API.
-
----
 
 ## 📌 Overview
 
-The **Binance Spot Bot Node.js** is designed to simplify automated trading, allowing users to configure custom strategies and execute trades efficiently.  
+The **Binance Spot Bot Node.js** implements a Simple Moving Average (SMA) strategy with advanced risk management features for automated cryptocurrency trading.
 
 ### ✨ Key Features:
-✅ Real-time price monitoring  
-✅ Automatic execution of buy and sell orders  
-✅ Trade logging for performance analysis  
+✅ Real-time WebSocket market monitoring  
+✅ SMA-based trading strategy with scaled entries  
+✅ Complete risk management system  
+✅ Secure Binance API integration  
+✅ Automated trade execution
 
----
+## 📊 Trading Strategy
 
-## ⚙️ Features
+### Technical Indicators
+- SMA (Simple Moving Average) - 20 periods
+- Dynamic entry points based on SMA
+- Comprehensive risk management parameters
 
-- **🔗 Binance API Integration:** Secure connection and authentication via API keys.  
-- **📈 Trading Strategies:** Customize buy and sell parameters.  
-- **📊 Logging & Monitoring:** Record transactions for analysis and strategy optimization.  
+### Entry System
+- First Entry: 0.033 BTC at SMA cross
+- Second Entry: 0.033 BTC at 1% below SMA
+- Third Entry: 0.034 BTC at 2% below SMA
 
----
+### Risk Management
+- Stop Loss: 2% below entry
+- Take Profit: 5% above entry
+- Trailing Stop: 1% for profit protection
 
 ## 🔧 Prerequisites
 
-Before starting, make sure you have installed:
-
-- [Node.js](https://nodejs.org/) (version 14 or later)  
-- npm (Node.js package manager)  
-- A [Binance](https://www.binance.com/) account with API keys enabled  
-
----
-
-## 🚀 Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/binance-spot-bot-nodejs.git
-   cd binance-spot-bot-nodejs
-
-Install dependencies:
-
-    npm install
-
-### 3. Set up environment variables:
-Create a .env file in the project root and add your Binance credentials:
-
-        BINANCE_API_KEY=your_api_key_here
-        BINANCE_API_SECRET=your_api_secret_here
+- Node.js (v14+)
+- npm
+- Binance account with API access
 
 ## ⚙️ Configuration
 
-### 🔹 Trading Parameters
+1. Create `.env` file:
+```env
+# Binance API Credentials
+API_KEY= your_binance_api_key
+SECRET_KEY= your_binance_secret_key
 
-Edit the configuration files to adjust your strategy parameters, such as:
+# API Endpoints (Use testnet for testing)
+API_URL= https://testnet.binance.vision/api        # For testnet
+# API_URL= https://api.binance.com/api             # For production
 
-- Trading pair (e.g., BTC/USDT)
-- Buy/Sell limits
-- Entry/Exit strategy
+STREAM_URL= wss://stream.testnet.binance.vision/ws # For testnet
+# STREAM_URL= wss://stream.binance.com/ws          # For production
 
-### 🛠️ Testing Environment
-It is recommended to test your strategy in simulation mode before trading with real funds.
+# Trading Pair Configuration
+SYMBOL= BTCUSDT    # Examples: SOLUSDT, ETHUSDT, BTCETH, etc.
+
+```
+
+## 🚀 Installation
+
+```bash
+git clone https://github.com/AntonioPaess/binance-spot-bot-nodejs.git
+cd binance-spot-bot-nodejs
+npm install
+```
 
 ## ▶️ Usage
 
-To start the bot, run:
-
-        npm start
-The bot will connect to Binance and begin monitoring the markets based on your configuration.
+Start the bot:
+```bash
+node start 
+or
+node -r dotenv/config index.js
+```
 
 ## 🤝 Contribution
 
@@ -94,7 +97,10 @@ Contributions are welcome! To contribute:
 
 This project is licensed under the MIT License.
 
-## ⚠️ Disclaimer
+## ⚠️ Risk Warning
 
-This project is for educational purposes only.
-Use it responsibly and always test your strategies before trading with real money.
+Trading cryptocurrencies involves substantial risk of loss. This bot:
+- Is for educational purposes
+- Should be tested in testnet first
+- Requires understanding of trading concepts
+- Does not guarantee profits

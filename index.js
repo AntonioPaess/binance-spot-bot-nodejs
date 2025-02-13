@@ -8,7 +8,7 @@
 const web_socket = require("ws");
 
 const ws = new web_socket(`${process.env.STREAM_URL}/${process.env.SYMBOL.toLocaleLowerCase()}@ticker`);
-const PROFITABILLITY = parseFloat(process.env.PROFITABILLITY);
+
 
 let sell_price = 0;
 
@@ -16,12 +16,14 @@ ws.onmessage = async (event) => {
     console.clear();
     const obj = JSON.parse(event.data);
     
+    const current_price = parseFloat(obj.a);
+    
     console.log("Symbol:" + obj.s);
-    console.log("Best Ask:" + obj.a);
+    
+    console.log("\nCurrent Price: " + current_price);
     
     
     // Estratégia
-    const current_price = parseFloat(obj.a);
 
     // Média móvel simples de 20 períodos (exemplo)
     const periods = 20;
@@ -37,26 +39,26 @@ ws.onmessage = async (event) => {
 
     if (sell_price === 0 && current_price < sma) {
         // Fracionando a entrada em 3 partes
-        console.log("Comprando 1/3");
+        console.log("🟢 BUYING 1/3");
         await newOrder(0.033, "BUY");
         
         if (current_price < sma * 0.99) {
-            console.log("Comprando 2/3");
+            console.log("🟢 BUYING 2/3");
             await newOrder(0.033, "BUY");
         }
         
         if (current_price < sma * 0.98) {
-            console.log("Comprando 3/3");
+            console.log("🟢 BUYING 3/3");
             await newOrder(0.034, "BUY");
         }
         
-        sell_price = current_price * PROFITABILLITY;
+        sell_price = takeProfit;
     } else if (sell_price !== 0 && (current_price >= takeProfit || current_price <= stopLoss || current_price <= trailingStop)) {
-        console.log("Vender - Trigger:" + (current_price >= takeProfit ? "Take Profit" : "Stop Loss/Trailing"));
+        console.log("\n🔴 SELLING - Trigger:" + (current_price >= takeProfit ? "Take Profit ✨" : "Stop Loss/Trailing ⚠️"));
         await newOrder(0.1, "SELL");
         sell_price = 0;
     } else {
-        console.log(`Esperando... Sell price: ${sell_price} | SMA: ${sma} | Stop Loss: ${stopLoss} | Take Profit: ${takeProfit}`);
+        console.log(`⏳ WAITING... Sell price: ${sell_price} | SMA: ${sma} | Stop Loss: ${stopLoss} | Take Profit: ${takeProfit}`);
     }
 }
 
