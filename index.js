@@ -4,68 +4,119 @@
 * 3 - Trade
 */
 
-// Monitoramente do mercado
-const web_socket = require("ws");
+const WebSocket = require("ws");
 
-const ws = new web_socket(`${process.env.STREAM_URL}/${process.env.SYMBOL.toLocaleLowerCase()}@ticker`);
+const ws = new WebSocket(
+  `${process.env.STREAM_URL}/${process.env.SYMBOL.toLocaleLowerCase()}@ticker`
+);
 
+// Configurações iniciais
+const periods = 20;
+let prices = []; // Acumula os últimos "periods" preços para o cálculo da SMA
 
-let sell_price = 0;
+// Variáveis para a posição
+let positionOpen = false;
+let entryPrice = 0;
+let takeProfit = 0;
+let stopLoss = 0;
+let trailingStop = 0;
+let maxPrice = 0;
 
 ws.onmessage = async (event) => {
-    console.clear();
-    const obj = JSON.parse(event.data);
-    
-    const current_price = parseFloat(obj.a);
-    
-    console.log("Symbol:" + obj.s);
-    
-    console.log("\nCurrent Price: " + current_price);
-    
-    
-    // Estratégia
+  console.clear();
+  const obj = JSON.parse(event.data);
+  const currentPrice = parseFloat(obj.a);
 
-    // Média móvel simples de 20 períodos (exemplo)
-    const periods = 20;
-    let prices = [];
-    prices.push(current_price);
-    if (prices.length > periods) prices.shift();
-    const sma = prices.reduce((a, b) => a + b, 0) / prices.length;
+  console.log("Symbol: " + obj.s);
+  console.log("Current Price: " + currentPrice);
 
-    // Stop loss e take profit
-    const stopLoss = current_price * 0.98; // 2% abaixo
-    const takeProfit = current_price * 1.05; // 5% acima
-    const trailingStop = current_price * 0.99; // 1% trailing stop
+  // Atualiza o array de preços para a SMA
+  prices.push(currentPrice);
+  if (prices.length > periods) {
+    prices.shift();
+  }
+  // Calcula a SMA se tivermos dados suficientes; caso contrário, usa o currentPrice
+  const sma =
+    prices.length > 0
+      ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+      : currentPrice;
+  console.log("SMA: " + sma.toFixed(2));
 
-    if (sell_price === 0 && current_price < sma) {
-        // Fracionando a entrada em 3 partes
-        console.log("🟢 BUYING 1/3");
-        await newOrder(0.033, "BUY");
-        
-        if (current_price < sma * 0.99) {
-            console.log("🟢 BUYING 2/3");
-            await newOrder(0.033, "BUY");
-        }
-        
-        if (current_price < sma * 0.98) {
-            console.log("🟢 BUYING 3/3");
-            await newOrder(0.034, "BUY");
-        }
-        
-        sell_price = takeProfit;
-    } else if (sell_price !== 0 && (current_price >= takeProfit || current_price <= stopLoss || current_price <= trailingStop)) {
-        console.log("\n🔴 SELLING - Trigger:" + (current_price >= takeProfit ? "Take Profit ✨" : "Stop Loss/Trailing ⚠️"));
-        await newOrder(0.1, "SELL");
-        sell_price = 0;
-    } else {
-        console.log(`⏳ WAITING... Sell price: ${sell_price} | SMA: ${sma} | Stop Loss: ${stopLoss} | Take Profit: ${takeProfit}`);
+  // Se não há posição aberta e o preço atual está abaixo da SMA, inicia a compra
+  if (!positionOpen && currentPrice < sma) {
+    // Fraciona a entrada em 3 partes
+    console.log("🟢 BUYING 1/3 at " + currentPrice);
+    await newOrder(0.033, "BUY");
+
+    if (currentPrice < sma * 0.99) {
+      console.log("🟢 BUYING 2/3 at " + currentPrice);
+      await newOrder(0.033, "BUY");
     }
-}
+
+    if (currentPrice < sma * 0.98) {
+      console.log("🟢 BUYING 3/3 at " + currentPrice);
+      await newOrder(0.034, "BUY");
+    }
+
+    // Registra o preço de entrada e define os níveis fixos de saída
+    entryPrice = currentPrice;
+    stopLoss = entryPrice * 0.98;   // 2% abaixo do preço de entrada
+    takeProfit = entryPrice * 1.05; // 5% acima do preço de entrada
+    trailingStop = entryPrice * 0.99; // Inicialmente 1% abaixo do preço de entrada
+    maxPrice = entryPrice;
+    positionOpen = true;
+
+    console.log(
+      `Posição aberta | Entry: ${entryPrice.toFixed(
+        2
+      )} | Stop Loss: ${stopLoss.toFixed(
+        2
+      )} | Take Profit: ${takeProfit.toFixed(2)} | Trailing Stop: ${trailingStop.toFixed(2)}`
+    );
+  }
+  // Se há posição aberta, verifica as condições de saída
+  else if (positionOpen) {
+    // Atualiza o preço máximo após a entrada e ajusta o trailing stop
+    if (currentPrice > maxPrice) {
+      maxPrice = currentPrice;
+      trailingStop = maxPrice * 0.99; // 1% abaixo do máximo atingido
+    }
+
+    // Condições de saída: Take Profit, Stop Loss ou Trailing Stop
+    if (currentPrice >= takeProfit) {
+      console.log("\n🔴 SELLING - Trigger: Take Profit at " + currentPrice);
+      await newOrder(0.1, "SELL");
+      positionOpen = false;
+    } else if (currentPrice <= stopLoss) {
+      console.log("\n🔴 SELLING - Trigger: Stop Loss at " + currentPrice);
+      await newOrder(0.1, "SELL");
+      positionOpen = false;
+    } else if (currentPrice <= trailingStop) {
+      console.log("\n🔴 SELLING - Trigger: Trailing Stop at " + currentPrice);
+      await newOrder(0.1, "SELL");
+      positionOpen = false;
+    } else {
+      console.log(
+        `⏳ WAITING... Entry: ${entryPrice.toFixed(
+          2
+        )} | Current: ${currentPrice.toFixed(2)} | Max: ${maxPrice.toFixed(
+          2
+        )}\nStop Loss: ${stopLoss.toFixed(
+          2
+        )} | Take Profit: ${takeProfit.toFixed(
+          2
+        )} | Trailing Stop: ${trailingStop.toFixed(2)}`
+      );
+    }
+  } else {
+    console.log(`⏳ WAITING... Sem posição aberta. SMA: ${sma.toFixed(2)}`);
+  }
+};
+
 
 // Trade
 const axios = require("axios");
 const crypto = require("crypto"); // Biblioteca nativa do node de criptografia hmac-sha256
-const { type } = require("os");
 
 async function newOrder(quantity, side){ // quantity = quantidade de btc; side = compra ou venda
 
